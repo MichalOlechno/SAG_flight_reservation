@@ -1,5 +1,5 @@
 package flight_reservation
-import Flight.Flights
+import Flight.FlightNames
 import akka.actor.{Actor, ActorRef, Props}
 import akka.event.Logging
 import flight_reservation.sbt.util.Customer
@@ -33,10 +33,10 @@ class FlightSupervisor() extends Actor {
       for(i<- 1 to number) ReservationAgents += context.system.actorOf(ReservationAgent.props(),name=s"ReservationAgent${i}")
     case StartReservation() =>
       //TODO: if availableFlights >0 then RAND within that flights
-      Customers.foreach(customer=>customer ! SearchForFlight(Flights.WarsawTokyo))
+      Customers.foreach(customer=>customer ! SearchForFlight(FlightNames.WarsawTokyo))
     case ReservationDone()=>
-      //TODO: if availableFlight >0 then RAND within the flights
-      sender() ! SearchForFlight(Flights.HelsinkiStockholm)
+      //TODO: if availableFlight >0 then RAND within the flights else die()
+      sender() ! SearchForFlight(FlightNames.HelsinkiStockholm)
     case GetAvailableReservationAgents() =>
       sender() ! AvailableReservationAgents
     case _ =>
