@@ -5,13 +5,13 @@ import flight_reservation.ReservationAgent.MakeAReservation
 
 object ReservationAgent {
 
-  def props(printerActor: ActorRef): Props = Props(new ReservationAgent(printerActor))
+  def props(): Props = Props()
   final case class MakeAReservation(flightNumber:String)
   final case class echo()
 
 }
 
-class ReservationAgent(printerActor: ActorRef) extends Actor
+class ReservationAgent() extends Actor
 {
   import Printer._
   var rand=new scala.util.Random()
@@ -20,7 +20,7 @@ class ReservationAgent(printerActor: ActorRef) extends Actor
   //var senderCutomer :ActorRef =null
    def receive = {
      case MakeAReservation(flightNumber) =>
-       printerActor ! Print(s"Making a reservation for ${sender()} reserved on ${flightNumber} flight")
+      /*
 
        //senderCutomer=sender()
 
@@ -33,8 +33,9 @@ class ReservationAgent(printerActor: ActorRef) extends Actor
          sender() ! "Fauilure 1"
         //sender() ! Customer.ReservationFailed(flightNumber,numberOfSeatsReserved)
     case echo =>
-       printerActor ! Print(s"${self} echo!!!!!!!!!!!!1")
 
+
+       */
    }
 
 

@@ -4,17 +4,22 @@ package sbt.util
 import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.{ask, pipe}
 import akka.util.Timeout
+import com.example.AkkaQuickstart
+import flight_reservation.FlightSupervisor.CreateCustomers
+import Flight.Flights.Flights
 
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
-
 import scala.concurrent.{Await, Future}
 
 object Customer {
-  def props(printerActor: ActorRef): Props = Props(new Customer(printerActor))
+  def props(): Props = Props()
   //#greeter-messages
   final case class ReservationOK(flightNumber: String, seatNumber:String)
   final case class ReservationFailed(flightNumber:String,occupiedSeats:Int)
   final case class ReserveASeat(flightNumber:String,reservationAgent:ActorRef,reservationAgent2:ActorRef)
+  final case class SearchForFlight(Flight:Flights)
+  final case class FlightDetails()
 }
 
 class Customer(printerActor: ActorRef) extends Actor{
@@ -22,9 +27,11 @@ class Customer(printerActor: ActorRef) extends Actor{
   import Printer._
   import ReservationAgent._
 
-  var occupied=false
-
   def receive = {
+    case SearchForFlight(flight)=>
+      //TODO: Ask FlightSupervisor for available ReservationAgents and then send request for them
+    case FlightDetails()=>
+      /*
     case ReservationOK(flightNumber, seatNumber) =>
       printerActor ! Print(s"OK Seat number ${seatNumber} reserved on ${flightNumber} flight")
     case ReservationFailed(flightNumber, occupiedSeats) =>
@@ -32,10 +39,12 @@ class Customer(printerActor: ActorRef) extends Actor{
     case ReserveASeat(flightNumber,reservationAgent,reservationAgent2)=>
       printerActor ! Print(s"${self} is sending a request to Reservation agent")
       ReserveASeat(flightNumber,reservationAgent,reservationAgent2 )
+       */
     case _ => printerActor ! Print(s"Not recognized request from ${sender()}")
   }
 
   def ReserveASeat(flightNumber:String, reservationAgent: ActorRef,reservationAgent2: ActorRef):Unit ={
+    /*
     implicit val timeout = Timeout(5 seconds)
     //reservationAgent ? MakeAReservation(flightNumber)
     //val realReservationAgent = context.actorSelection("akka://TicketReservationSystem/user/ReservationAgent")
@@ -44,7 +53,7 @@ class Customer(printerActor: ActorRef) extends Actor{
     printerActor ! Print(result)
     //(reservationAgent ? MakeAReservation(flightNumber))
     reservationAgent2 ! echo
-
+     */
   }
 
 }
