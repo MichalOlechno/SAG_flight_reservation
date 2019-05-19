@@ -22,6 +22,8 @@ class Customer(printerActor: ActorRef) extends Actor{
   import Printer._
   import ReservationAgent._
 
+  var occupied=false
+
   def receive = {
     case ReservationOK(flightNumber, seatNumber) =>
       printerActor ! Print(s"OK Seat number ${seatNumber} reserved on ${flightNumber} flight")

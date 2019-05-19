@@ -23,10 +23,7 @@ class ReservationAgent(printerActor: ActorRef) extends Actor
        printerActor ! Print(s"Making a reservation for ${sender()} reserved on ${flightNumber} flight")
 
        //senderCutomer=sender()
-       var x=0
-       for(i <- 1 to 1000000000)
-         for(j <- 1 to 10)
-           x=x+i+j
+
        numberOfSeatsReserved=1+rand.nextInt((100-1)+1)
        if(numberOfSeatsReserved<80) {
          sender() ! "OK 1"
