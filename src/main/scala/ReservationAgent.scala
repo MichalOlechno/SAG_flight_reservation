@@ -10,7 +10,7 @@ import scala.collection.mutable.ListBuffer
 
 object ReservationAgent {
 
-  def props(): Props = Props()
+  def props(): Props = Props(new ReservationAgent)
   final case class MakeAReservation(flightNumber:String)
   final case class echo()
   final case class SendFlightDetail(FlightName:FlightNames)

@@ -1,16 +1,17 @@
 package flight_reservation
+
 import Flight.FlightNames
 import akka.actor.{Actor, ActorRef, Props}
 import akka.event.Logging
 import flight_reservation.sbt.util.Customer
-import flight_reservation.sbt.util.Customer.SearchForFlight
+import flight_reservation.sbt.util.Customer.{SearchForFlight, Tick}
 
 import scala.concurrent.duration._
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 
 object FlightSupervisor {
-  def props(): Props = Props()
+  def props(): Props = Props(new FlightSupervisor())
   final case class CreateCustomers(number: Int)
   final case class CreateReservationAgents(number: Int)
   final case class CreateTickAgent()
@@ -18,6 +19,7 @@ object FlightSupervisor {
   final case class ReservationDone()
   final case class GetAvailableReservationAgents()
   final case class schedule()
+  final case class TickACustomer()
   //final case class test(list:ListBuffer[ActorRef])
 
 }
@@ -48,9 +50,12 @@ class FlightSupervisor() extends Actor {
       sender() ! AvailableReservationAgents
     case schedule() =>
       implicit val ec: ExecutionContext = context.dispatcher
-      Customers.foreach(a=>context.system.scheduler.schedule(0 milliseconds,100 milliseconds,a,"Tick"))
-
-    //case test(list)=>
+     Customers.foreach(x=>context.system.scheduler.schedule(0 seconds,100 milliseconds){
+       x ! Tick()
+     })
+      //Customers.foreach(a=>context.system.scheduler.schedule(0 milliseconds,100 milliseconds,a,"Tick"))
+    case TickACustomer()=>
+      Customers(1) ! Tick()
     case _ =>
   }
 }

@@ -2,7 +2,7 @@ package com.example
 
 import akka.actor.{ActorRef, ActorSystem}
 import flight_reservation.FlightSupervisor
-import flight_reservation.FlightSupervisor.{CreateCustomers, CreateReservationAgents}
+import flight_reservation.FlightSupervisor.{CreateCustomers, CreateReservationAgents, TickACustomer, schedule}
 
 
 object AkkaQuickstart extends App {
@@ -15,6 +15,8 @@ object AkkaQuickstart extends App {
 
   AgentsSupervisor ! CreateCustomers(CustomerNumber)
   AgentsSupervisor ! CreateReservationAgents(ReservationAgentNumber)
+  //AgentsSupervisor ! TickACustomer()
+  AgentsSupervisor ! schedule()
 
   /*
 

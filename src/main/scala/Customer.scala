@@ -4,6 +4,7 @@ package sbt.util
 import Flight.{FlightDetails, FlightNames}
 import Flight.FlightNames.FlightNames
 import akka.actor.{Actor, ActorRef, Props}
+import akka.event.Logging
 import akka.pattern.{ask, pipe}
 import akka.util.Timeout
 import com.example.AkkaQuickstart
@@ -14,20 +15,21 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
 object Customer {
-  def props(): Props = Props()
+  def props(): Props = Props(new Customer())
   //#greeter-messages
   final case class ReservationOK(flightNumber: String, seatNumber:String)
   final case class ReservationFailed(flightNumber:String,occupiedSeats:Int)
   final case class ReserveASeat(flightNumber:String,reservationAgent:ActorRef,reservationAgent2:ActorRef)
   final case class SearchForFlight(Destination:FlightNames)
   final case class SuitableFlights(flightDetails:FlightDetails)
-  final case class Test()
+  final case class Tick()
 }
 
 class Customer() extends Actor{
   import Customer._
   import ReservationAgent._
   implicit val timeout = Timeout(5 seconds)
+  val log = Logging(context.system, this)
   def receive = {
     case SearchForFlight(flightName)=>
       //TODO: Ask FlightSupervisor for available ReservationAgents and then send request for them
@@ -36,6 +38,9 @@ class Customer() extends Actor{
       availableAgents.foreach(agent=>agent ! SendFlightDetail(flightName))
     case SuitableFlights(flightDetails)=>
       //TODO: Collect flightDetails from agents for specified amount of time
+    case Tick() =>
+      log.info(s"agent ${self} received a tick")
+
     //case Test()=>
 
 
