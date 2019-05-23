@@ -2,5 +2,5 @@ package Flight
 
 object FlightNames extends Enumeration {
   type FlightNames =Value
-  val WarsawTokyo,TokyoWarsaw,NewYorkCairo,CairoNewYork,HelsinkiStockholm,StockholmHelsinki=Value
+  val Tokyo,NewYork,Cairo,Helsinki,Berlin=Value
 }

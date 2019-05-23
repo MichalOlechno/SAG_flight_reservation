@@ -3,15 +3,16 @@ package flight_reservation
 import Flight.FlightDetails
 import Flight.FlightNames.FlightNames
 import akka.actor.{Actor, ActorRef, Props}
+import flight_reservation.FlightSupervisor.ReceiveReservationAgentData
 import flight_reservation.ReservationAgent.{MakeAReservation, SendFlightDetail}
-import flight_reservation.sbt.util.Customer.SuitableFlights
+import flight_reservation.sbt.util.Customer.{SuitableFlights, reservationDone}
 
 import scala.collection.mutable.ListBuffer
 
 object ReservationAgent {
 
   def props(): Props = Props(new ReservationAgent)
-  final case class MakeAReservation(flightNumber:String)
+  final case class MakeAReservation(flightDetails:FlightDetails)
   final case class echo()
   final case class SendFlightDetail(FlightName:FlightNames)
 }
@@ -21,16 +22,25 @@ class ReservationAgent() extends Actor
   val availableFlightsList : ListBuffer[FlightDetails] = ListBuffer()
   var rand=new scala.util.Random()
   var numberOfSeatsReserved:Int=0
-  // we shouldn't have knowledge about customer here but we should pass sender() to directFlight (which is next agent)
-  //var senderCutomer :ActorRef =null
-   def receive = {
-    case SendFlightDetail(destination)=>
-      availableFlightsList.foreach(flight => if(flight.flightName==destination){
-        sender() ! SuitableFlights(flight)
-      })
-     case MakeAReservation(flightNumber) =>
-      /*
 
+   def receive = {
+     case SendFlightDetail(destination) =>
+       availableFlightsList.foreach(flight => if (flight.flightName == destination) {
+         sender() ! SuitableFlights(flight)
+       })
+     case MakeAReservation(flightDetails) =>
+       var flight: FlightDetails = availableFlightsList.find(x => x.flightName == flightDetails.flightName).get
+       if (flight != null) {
+         flight.seatsLeft = flight.seatsLeft - 1
+         flight.seat += sender()
+       }
+       sender() ! reservationDone(flight)
+       if (flight.seatsLeft < 1) {
+         context.parent ! ReceiveReservationAgentData(flight)
+       }
+     case _ =>
+   }
+/*
        //senderCutomer=sender()
 
        numberOfSeatsReserved=1+rand.nextInt((100-1)+1)
@@ -42,10 +52,10 @@ class ReservationAgent() extends Actor
          sender() ! "Fauilure 1"
         //sender() ! Customer.ReservationFailed(flightNumber,numberOfSeatsReserved)
     case echo =>
+*/
 
 
-       */
-   }
+
 
 
 }

@@ -8,7 +8,7 @@ import akka.event.Logging
 import akka.pattern.{ask, pipe}
 import akka.util.Timeout
 import com.example.AkkaQuickstart
-import flight_reservation.FlightSupervisor.{CreateCustomers, GetAvailableReservationAgents}
+import flight_reservation.FlightSupervisor.{CreateCustomers, GetAvailableReservationAgents, ReceiveCustomerData, ReservationDone, customerReservedAFlight}
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
@@ -22,6 +22,8 @@ object Customer {
   final case class ReserveASeat(flightNumber:String,reservationAgent:ActorRef,reservationAgent2:ActorRef)
   final case class SearchForFlight(Destination:FlightNames)
   final case class SuitableFlights(flightDetails:FlightDetails)
+  final case class reservationDone(flightDetails:FlightDetails)
+  final case class GetData()
   final case class Tick()
 }
 
@@ -29,36 +31,47 @@ class Customer() extends Actor{
   import Customer._
   import ReservationAgent._
   implicit val timeout = Timeout(5 seconds)
+  var reservedFlights: ListBuffer[Int] = ListBuffer()
   val log = Logging(context.system, this)
+  var agent_status=""
+  var availableAgents: ListBuffer[ActorRef] = ListBuffer()
+  var answers:ListBuffer[FlightDetails]=ListBuffer()
+  var start=System.nanoTime()
+  var end=System.nanoTime()
+  var seatsReserved: ListBuffer[ActorRef] = ListBuffer()
   def receive = {
     case SearchForFlight(flightName)=>
-      //TODO: Ask FlightSupervisor for available ReservationAgents and then send request for them
       val response =context.parent ? GetAvailableReservationAgents()
-      val availableAgents= Await.result(response,timeout.duration).asInstanceOf[ListBuffer[ActorRef]]
+      availableAgents= Await.result(response,timeout.duration).asInstanceOf[ListBuffer[ActorRef]]
       availableAgents.foreach(agent=>agent ! SendFlightDetail(flightName))
+      agent_status="waitingForAnswers"
+      start=System.nanoTime()
     case SuitableFlights(flightDetails)=>
-      //TODO: Collect flightDetails from agents for specified amount of time
+      answers +=flightDetails
+    case reservationDone(flightDetails) =>
+      if(flightDetails==null)
+        {
+          SelectAFlight()
+        }
+      else{
+        reservedFlights+=flightDetails.flightID
+        context.parent ! customerReservedAFlight(self)
+      }
     case Tick() =>
-      log.info(s"agent ${self} received a tick")
-
-    //case Test()=>
-
-
-
+      if(agent_status.equalsIgnoreCase("waitingForAnswers")) {
+        end=System.nanoTime()
+        if (answers.length == availableAgents.length || (end-start)>500*1000*1000 ){
+            SelectAFlight()
+        }
+      }
+    case GetData() =>
+      context.parent ! ReceiveCustomerData(reservedFlights)
     case _ =>
   }
 
-  def ReserveASeat(flightNumber:String, reservationAgent: ActorRef,reservationAgent2: ActorRef):Unit ={
-    /*
-    implicit val timeout = Timeout(5 seconds)
-    //reservationAgent ? MakeAReservation(flightNumber)
-    //val realReservationAgent = context.actorSelection("akka://TicketReservationSystem/user/ReservationAgent")
-    val response = (reservationAgent? MakeAReservation(flightNumber))
-    val result=Await.result(response,timeout.duration).asInstanceOf[String]
-    printerActor ! Print(result)
-    //(reservationAgent ? MakeAReservation(flightNumber))
-    reservationAgent2 ! echo
-     */
+  def SelectAFlight(): Unit = {
+    agent_status="ok"
+    answers(0).agent ! ReservationAgent.MakeAReservation(answers(0))
+    answers-=answers(0)
   }
-
 }

@@ -1,10 +1,10 @@
 package flight_reservation
 
-import Flight.FlightNames
+import Flight.{FlightDetails, FlightNames}
 import akka.actor.{Actor, ActorRef, Props}
 import akka.event.Logging
 import flight_reservation.sbt.util.Customer
-import flight_reservation.sbt.util.Customer.{SearchForFlight, Tick}
+import flight_reservation.sbt.util.Customer.{GetData, SearchForFlight, Tick}
 
 import scala.concurrent.duration._
 import scala.collection.mutable.ListBuffer
@@ -20,7 +20,9 @@ object FlightSupervisor {
   final case class GetAvailableReservationAgents()
   final case class schedule()
   final case class TickACustomer()
-  //final case class test(list:ListBuffer[ActorRef])
+  final case class customerReservedAFlight(agent:ActorRef)
+  final case class ReceiveReservationAgentData(flightDetails:FlightDetails)
+  final case class ReceiveCustomerData(reservedFlights:ListBuffer[Int])
 
 }
 
@@ -33,19 +35,15 @@ class FlightSupervisor() extends Actor {
   var ReservationAgents: ListBuffer[ActorRef] = ListBuffer()
   var AvailableReservationAgents: ListBuffer[ActorRef] = ListBuffer()
 
-
-
   def receive={
     case CreateCustomers(number) =>
       for(i<- 1 to number) Customers += context.system.actorOf(Customer.props(),name=s"customerAgent${i}")
     case CreateReservationAgents(number) =>
       for(i<- 1 to number) ReservationAgents += context.system.actorOf(ReservationAgent.props(),name=s"ReservationAgent${i}")
     case StartReservation() =>
-      //TODO: if availableFlights >0 then RAND within that flights
-      Customers.foreach(customer=>customer ! SearchForFlight(FlightNames.WarsawTokyo))
-    case ReservationDone()=>
-      //TODO: if availableFlight >0 then RAND within the flights else die()
-      sender() ! SearchForFlight(FlightNames.HelsinkiStockholm)
+      StartReservation()
+    case customerReservedAFlight(agent)=>
+      StartReservation(agent)
     case GetAvailableReservationAgents() =>
       sender() ! AvailableReservationAgents
     case schedule() =>
@@ -53,10 +51,24 @@ class FlightSupervisor() extends Actor {
      Customers.foreach(x=>context.system.scheduler.schedule(0 seconds,100 milliseconds){
        x ! Tick()
      })
-      //Customers.foreach(a=>context.system.scheduler.schedule(0 milliseconds,100 milliseconds,a,"Tick"))
-    case TickACustomer()=>
-      Customers(1) ! Tick()
+    case ReceiveReservationAgentData(flightDetails)=>
+      //TODO: Get Date
+    case ReceiveCustomerData(reservedFlights)=>
+    //TODO: Get Date
     case _ =>
+  }
+
+  def StartReservation():Unit={
+    //TODO: rand flightNames
+    Customers.foreach(customer=>customer ! SearchForFlight(FlightNames.Berlin))
+  }
+  def StartReservation(agent:ActorRef):Unit={
+    if (AvailableReservationAgents.length>0)
+      {
+        //TODO: rand flightNames
+        agent ! SearchForFlight(FlightNames.Berlin)
+      }
+    else agent ! GetData()
   }
 }
 

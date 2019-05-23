@@ -2,7 +2,7 @@ package com.example
 
 import akka.actor.{ActorRef, ActorSystem}
 import flight_reservation.FlightSupervisor
-import flight_reservation.FlightSupervisor.{CreateCustomers, CreateReservationAgents, TickACustomer, schedule}
+import flight_reservation.FlightSupervisor.{CreateCustomers, CreateReservationAgents, StartReservation, TickACustomer, schedule}
 
 
 object AkkaQuickstart extends App {
@@ -15,20 +15,7 @@ object AkkaQuickstart extends App {
 
   AgentsSupervisor ! CreateCustomers(CustomerNumber)
   AgentsSupervisor ! CreateReservationAgents(ReservationAgentNumber)
-  //AgentsSupervisor ! TickACustomer()
   AgentsSupervisor ! schedule()
+  AgentsSupervisor ! StartReservation()
 
-  /*
-
-  val customer:ActorRef=system.actorOf(Customer.props(printer),name="customerAgent")
-  val reservationAgent:ActorRef=system.actorOf(ReservationAgent.props(printer),name="ReservationAgent")
-  val reservationAgent2:ActorRef=system.actorOf(ReservationAgent.props(printer),name="ReservationAgent2")
-
-  for(i<- 1 to CustomerNumber) Customers += system.actorOf(Customer.props(printer),name=s"customerAgent${i}")
-  for(i<- 1 to ReservationAgentNumber) ReservationAgents += system.actorOf(ReservationAgent.props(printer),name=s"ReservationAgent${i}")
-
-
-
-  Customers.foreach(customer=>customer ! ReserveASeat("Tokyo-Warsaw",ReservationAgents(0),ReservationAgents(1)))
-*/
 }
