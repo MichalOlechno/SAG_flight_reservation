@@ -21,11 +21,11 @@ object Customer {
   final case class ReserveASeat(flightNumber:String,reservationAgent:ActorRef,reservationAgent2:ActorRef)
   final case class SearchForFlight(Destination:FlightNames)
   final case class SuitableFlights(flightDetails:FlightDetails)
+  final case class Test()
 }
 
 class Customer() extends Actor{
   import Customer._
-  import Printer._
   import ReservationAgent._
   implicit val timeout = Timeout(5 seconds)
   def receive = {
@@ -36,6 +36,9 @@ class Customer() extends Actor{
       availableAgents.foreach(agent=>agent ! SendFlightDetail(flightName))
     case SuitableFlights(flightDetails)=>
       //TODO: Collect flightDetails from agents for specified amount of time
+    //case Test()=>
+
+
 
     case _ =>
   }

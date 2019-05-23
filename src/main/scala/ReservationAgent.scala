@@ -19,7 +19,6 @@ object ReservationAgent {
 class ReservationAgent() extends Actor
 {
   val availableFlightsList : ListBuffer[FlightDetails] = ListBuffer()
-  import Printer._
   var rand=new scala.util.Random()
   var numberOfSeatsReserved:Int=0
   // we shouldn't have knowledge about customer here but we should pass sender() to directFlight (which is next agent)

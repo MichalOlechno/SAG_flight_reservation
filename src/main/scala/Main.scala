@@ -1,12 +1,8 @@
 package com.example
 
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
+import akka.actor.{ActorRef, ActorSystem}
+import flight_reservation.FlightSupervisor
 import flight_reservation.FlightSupervisor.{CreateCustomers, CreateReservationAgents}
-import flight_reservation.{FlightSupervisor, Printer, ReservationAgent}
-import flight_reservation.sbt.util.Customer
-import flight_reservation.sbt.util.Customer.ReserveASeat
-
-import scala.collection.mutable.ListBuffer
 
 
 object AkkaQuickstart extends App {
