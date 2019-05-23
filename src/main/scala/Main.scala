@@ -17,5 +17,4 @@ object AkkaQuickstart extends App {
   AgentsSupervisor ! CreateReservationAgents(ReservationAgentNumber)
   AgentsSupervisor ! schedule()
   AgentsSupervisor ! StartReservation()
-
 }

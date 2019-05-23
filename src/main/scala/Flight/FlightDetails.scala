@@ -5,7 +5,7 @@ import akka.actor.ActorRef
 
 import scala.collection.mutable.ListBuffer
 
-class FlightDetails (FlightDate:String, price:Int,SeatsLeft:Int,FlightTime:Float,FlightName: FlightNames,Agent: ActorRef,FlightID:Int)
+class FlightDetails (FlightDate:String, price:Int,SeatsLeft:Int,FlightTime:Float,FlightName: FlightNames,Agent: ActorRef,FlightID:String)
   {
     var flightDate=FlightDate
     var seatsLeft=SeatsLeft

@@ -8,14 +8,14 @@ import akka.event.Logging
 import akka.pattern.{ask, pipe}
 import akka.util.Timeout
 import com.example.AkkaQuickstart
-import flight_reservation.FlightSupervisor.{CreateCustomers, GetAvailableReservationAgents, ReceiveCustomerData, ReservationDone, customerReservedAFlight}
+import flight_reservation.FlightSupervisor.{CreateCustomers, GetAvailableReservationAgents, ReceiveCustomerData, ReservationDone, StartReservation, Stop, customerReservedAFlight}
 
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, Future, TimeoutException}
 
 object Customer {
-  def props(): Props = Props(new Customer())
+  def props(parent:ActorRef): Props = Props(new Customer(parent:ActorRef))
   //#greeter-messages
   final case class ReservationOK(flightNumber: String, seatNumber:String)
   final case class ReservationFailed(flightNumber:String,occupiedSeats:Int)
@@ -27,11 +27,11 @@ object Customer {
   final case class Tick()
 }
 
-class Customer() extends Actor{
+class Customer(supervisor:ActorRef) extends Actor{
   import Customer._
   import ReservationAgent._
-  implicit val timeout = Timeout(5 seconds)
-  var reservedFlights: ListBuffer[Int] = ListBuffer()
+  implicit val timeout = Timeout(1 seconds)
+  var reservedFlights: ListBuffer[String] = ListBuffer()
   val log = Logging(context.system, this)
   var agent_status=""
   var availableAgents: ListBuffer[ActorRef] = ListBuffer()
@@ -41,37 +41,69 @@ class Customer() extends Actor{
   var seatsReserved: ListBuffer[ActorRef] = ListBuffer()
   def receive = {
     case SearchForFlight(flightName)=>
-      val response =context.parent ? GetAvailableReservationAgents()
-      availableAgents= Await.result(response,timeout.duration).asInstanceOf[ListBuffer[ActorRef]]
-      availableAgents.foreach(agent=>agent ! SendFlightDetail(flightName))
-      agent_status="waitingForAnswers"
+
+      try {
+        log.info(s"Trying to get availableAgents")
+        val response = supervisor ? GetAvailableReservationAgents()
+        availableAgents = Await.result(response, timeout.duration).asInstanceOf[ListBuffer[ActorRef]]
+        availableAgents.foreach(agent => agent ! SendFlightDetail(flightName))
+        agent_status = "waitingForAnswers"
+        log.info(s"WaitingForAnswers. AvailableAgents ${availableAgents.length}")
+      }
+      catch {
+        case e: TimeoutException =>{
+          log.info("Exception cought")
+          supervisor ! customerReservedAFlight(self)
+        }
+      }
       start=System.nanoTime()
     case SuitableFlights(flightDetails)=>
+      //log.info(s"Got answer from ${sender()}")
       answers +=flightDetails
     case reservationDone(flightDetails) =>
       if(flightDetails==null)
         {
+          log.info(s"CONFLICT!!!!!!!!!!!!!!!!!1")
           SelectAFlight()
         }
       else{
+        log.info(s"reserved OK ")
         reservedFlights+=flightDetails.flightID
-        context.parent ! customerReservedAFlight(self)
+        answers.clear()
+        supervisor ! customerReservedAFlight(self)
       }
     case Tick() =>
+      //TODO : TEST how many % of answers gathered (check if timeout is long enough)
+      //log.info("Tick")
+      if(!agent_status.equalsIgnoreCase("") && availableAgents.isEmpty) supervisor ! Stop(self)
       if(agent_status.equalsIgnoreCase("waitingForAnswers")) {
-        end=System.nanoTime()
-        if (answers.length == availableAgents.length || (end-start)>500*1000*1000 ){
+          end = System.nanoTime()
+          if (answers.length == availableAgents.length || (end - start) > 5000 * 1000 * 1000) {
             SelectAFlight()
         }
       }
     case GetData() =>
-      context.parent ! ReceiveCustomerData(reservedFlights)
+      supervisor ! ReceiveCustomerData(reservedFlights)
     case _ =>
   }
 
   def SelectAFlight(): Unit = {
-    agent_status="ok"
-    answers(0).agent ! ReservationAgent.MakeAReservation(answers(0))
-    answers-=answers(0)
-  }
+    if(answers.nonEmpty) {
+      val response = answers(0).agent ? ReservationAgent.MakeAReservation(answers(0))
+      val result = Await.result(response, timeout.duration).asInstanceOf[FlightDetails]
+      if (result.flightID.isEmpty()) {
+        log.info(s"CONFLICT!!!!!!!!!!!!!!!!!1")
+        answers -= answers(0)
+        agent_status = "ok"
+        SelectAFlight()
+      }
+      else {
+        log.info(s"reserved OK ")
+        reservedFlights += result.flightID
+        answers.clear()
+        supervisor ! customerReservedAFlight(self)
+      }
+    }
+    }
+
 }
