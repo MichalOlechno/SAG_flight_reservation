@@ -1,32 +1,70 @@
 package flight_reservation
 
+import Flight.{FlightDetails, FlightNames}
+import Flight.FlightNames.FlightNames
 import akka.actor.{Actor, ActorRef, Props}
-import flight_reservation.ReservationAgent.MakeAReservation
+import akka.event.Logging
+import flight_reservation.FlightSupervisor.ReceiveReservationAgentData
+import flight_reservation.ReservationAgent.{MakeAReservation, PrepareData, SendFlightDetail}
+import flight_reservation.sbt.util.Customer.{SuitableFlights, reservationDone}
+
+import scala.collection.mutable.ListBuffer
 
 object ReservationAgent {
 
-  def props(printerActor: ActorRef): Props = Props(new ReservationAgent(printerActor))
-  final case class MakeAReservation(flightNumber:String)
+  def props(parent:ActorRef): Props = Props(new ReservationAgent(parent:ActorRef))
+  final case class MakeAReservation(flightDetails:FlightDetails,actor:ActorRef)
   final case class echo()
-
+  final case class SendFlightDetail(FlightName:FlightNames)
+  final case class PrepareData(FlightNames:FlightNames)
 }
 
-class ReservationAgent(printerActor: ActorRef) extends Actor
+class ReservationAgent(supervisor:ActorRef) extends Actor
 {
-  import Printer._
+  val availableFlightsList : ListBuffer[FlightDetails] = ListBuffer()
   var rand=new scala.util.Random()
   var numberOfSeatsReserved:Int=0
-  // we shouldn't have knowledge about customer here but we should pass sender() to directFlight (which is next agent)
-  //var senderCutomer :ActorRef =null
-   def receive = {
-     case MakeAReservation(flightNumber) =>
-       printerActor ! Print(s"Making a reservation for ${sender()} reserved on ${flightNumber} flight")
+  val log = Logging(context.system, this)
 
+   def receive = {
+     case PrepareData(flightName) =>
+       prepareData(flightName)
+     case SendFlightDetail(destination) =>
+       availableFlightsList.foreach(flight => if (flight.flightName == destination) {
+         sender() ! SuitableFlights(flight)
+       })
+     case MakeAReservation(flightDetails,actor) =>
+       var flight: FlightDetails=null
+       try {
+         flight = availableFlightsList.find(x => x.flightName == flightDetails.flightName).get
+         flight.seatsLeft = flight.seatsLeft - 1
+         flight.seat += actor
+         sender() ! flight
+         if (flight.seatsLeft < 1) {
+           log.info("All seats taken")
+           availableFlightsList -= flight
+           if (availableFlightsList.isEmpty) {
+             supervisor ! ReceiveReservationAgentData(flight,isUnavailable = true)
+           }
+           else supervisor ! ReceiveReservationAgentData(flight,isUnavailable = false)
+         }
+       }
+         catch{
+           case e:NoSuchElementException=>
+
+             sender() ! new FlightDetails("",0,0,0,null,null,"")
+         }
+
+     case _ =>
+   }
+  def prepareData(flightName:FlightNames):Unit={
+    availableFlightsList+=new FlightDetails("today",100,50,60,flightName,self,self.toString()+"1")
+    //availableFlightsList+=new FlightDetails("today",100,10,60,flightName,self,self.toString()+"2")
+
+  }
+/*
        //senderCutomer=sender()
-       var x=0
-       for(i <- 1 to 1000000000)
-         for(j <- 1 to 10)
-           x=x+i+j
+
        numberOfSeatsReserved=1+rand.nextInt((100-1)+1)
        if(numberOfSeatsReserved<80) {
          sender() ! "OK 1"
@@ -36,9 +74,10 @@ class ReservationAgent(printerActor: ActorRef) extends Actor
          sender() ! "Fauilure 1"
         //sender() ! Customer.ReservationFailed(flightNumber,numberOfSeatsReserved)
     case echo =>
-       printerActor ! Print(s"${self} echo!!!!!!!!!!!!1")
+*/
 
-   }
+
+
 
 
 }

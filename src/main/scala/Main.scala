@@ -1,18 +1,20 @@
 package com.example
 
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props}
-import flight_reservation.{Printer, ReservationAgent}
-import flight_reservation.sbt.util.Customer
-import flight_reservation.sbt.util.Customer.ReserveASeat
+import akka.actor.{ActorRef, ActorSystem}
+import flight_reservation.FlightSupervisor
+import flight_reservation.FlightSupervisor.{CreateCustomers, CreateReservationAgents, ProcessData, StartReservation, TickACustomer, schedule}
 
 
 object AkkaQuickstart extends App {
+  val CustomerNumber=200
+  val ReservationAgentNumber=200
+
+
   val system: ActorSystem=ActorSystem("TicketReservationSystem")
-  val printer:ActorRef=system.actorOf(Printer.props,"printerAgent")
-  val customer:ActorRef=system.actorOf(Customer.props(printer),name="customerAgent")
-  val reservationAgent:ActorRef=system.actorOf(ReservationAgent.props(printer),name="ReservationAgent")
-  val reservationAgent2:ActorRef=system.actorOf(ReservationAgent.props(printer),name="ReservationAgent2")
+  val AgentsSupervisor:ActorRef=system.actorOf(FlightSupervisor.props(),name="AgentsSupervisor")
 
-  customer ! ReserveASeat("Warsaw-Tokyo",reservationAgent,reservationAgent2)
-
+  AgentsSupervisor ! CreateCustomers(CustomerNumber)
+  AgentsSupervisor ! CreateReservationAgents(ReservationAgentNumber)
+  AgentsSupervisor ! schedule()
+  AgentsSupervisor ! StartReservation()
 }
