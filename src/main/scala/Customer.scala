@@ -37,6 +37,7 @@ class Customer(supervisor:ActorRef) extends Actor{
   var availableAgents: ListBuffer[ActorRef] = ListBuffer()
   var answers:ListBuffer[FlightDetails]=ListBuffer()
   var start=System.nanoTime()
+  var rand=new scala.util.Random()
   var end=System.nanoTime()
   var seatsReserved: ListBuffer[ActorRef] = ListBuffer()
 
@@ -74,12 +75,14 @@ class Customer(supervisor:ActorRef) extends Actor{
         supervisor ! customerReservedAFlight(self)
       }
     case Tick() =>
-      //TODO : TEST how many % of answers gathered (check if timeout is long enough)
       //log.info("Tick")
+
       if(!agent_status.equalsIgnoreCase("") && availableAgents.isEmpty) supervisor ! Stop(self)
       if(agent_status.equalsIgnoreCase("waitingForAnswers")) {
           end = System.nanoTime()
-          if (answers.length == availableAgents.length || (end - start) > 5000 * 1000 * 1000) {
+
+          if (answers.length == availableAgents.length || (end - start) > 1000 * 1000 * 1000) {
+
             SelectAFlight()
         }
       }
@@ -90,23 +93,34 @@ class Customer(supervisor:ActorRef) extends Actor{
   }
 
   def SelectAFlight(): Unit = {
-    if(answers.nonEmpty) {
-      val response = answers(0).agent ? ReservationAgent.MakeAReservation(answers(0),self)
-      val result = Await.result(response, timeout.duration).asInstanceOf[FlightDetails]
-      if (result.flightID.isEmpty()) {
-        log.info(s"CONFLICT!!!!!!!!!!!!!!!!!1")
-        log.info(s"${answers(0)}")
-        answers -= answers(0)
-        agent_status = "ok"
-        SelectAFlight()
+    if (answers.nonEmpty) {
+      agent_status = "ok"
+      var answ = answers(rand.nextInt(answers.length))
+      if (answ.agent != null) {
+
+        val response = answ.agent ? ReservationAgent.MakeAReservation(answ, self)
+        val result = Await.result(response, timeout.duration).asInstanceOf[FlightDetails]
+        if (result.flightID.isEmpty()) {
+          //log.info(s"CONFLICT!!!!!!!!!!!!!!!!!")
+          answers -= answ
+
+          SelectAFlight()
+        }
+        else {
+          log.info(s"reserved OK ")
+          reservedFlights += result.flightID
+          answers.clear()
+          supervisor ! customerReservedAFlight(self)
+        }
       }
       else {
-        log.info(s"reserved OK ")
-        reservedFlights += result.flightID
-        answers.clear()
-        supervisor ! customerReservedAFlight(self)
+        answers -= answ
+        SelectAFlight()
       }
     }
+    else {
+      supervisor ! customerReservedAFlight(self)
     }
+  }
 
 }

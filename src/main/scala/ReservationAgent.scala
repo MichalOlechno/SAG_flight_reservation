@@ -25,6 +25,7 @@ class ReservationAgent(supervisor:ActorRef) extends Actor
   var rand=new scala.util.Random()
   var numberOfSeatsReserved:Int=0
   val log = Logging(context.system, this)
+  var n=0
 
    def receive = {
      case PrepareData(flightName) =>
@@ -32,7 +33,11 @@ class ReservationAgent(supervisor:ActorRef) extends Actor
      case SendFlightDetail(destination) =>
        availableFlightsList.foreach(flight => if (flight.flightName == destination) {
          sender() ! SuitableFlights(flight)
-       })
+       }
+       else{
+         sender() ! SuitableFlights(new FlightDetails("",0,0,0,null,null,""))
+       }
+       )
      case MakeAReservation(flightDetails,actor) =>
        var flight: FlightDetails=null
        try {
@@ -41,7 +46,7 @@ class ReservationAgent(supervisor:ActorRef) extends Actor
          flight.seat += actor
          sender() ! flight
          if (flight.seatsLeft < 1) {
-           log.info("All seats taken")
+           //log.info("All seats taken")
            availableFlightsList -= flight
            if (availableFlightsList.isEmpty) {
              supervisor ! ReceiveReservationAgentData(flight,isUnavailable = true)
@@ -58,23 +63,9 @@ class ReservationAgent(supervisor:ActorRef) extends Actor
      case _ =>
    }
   def prepareData(flightName:FlightNames):Unit={
-    availableFlightsList+=new FlightDetails("today",100,50,60,flightName,self,self.toString()+"1")
-    //availableFlightsList+=new FlightDetails("today",100,10,60,flightName,self,self.toString()+"2")
-
+    availableFlightsList+=new FlightDetails("today",100,10,60,flightName,self,self.toString()+n)
+    n=n+1
   }
-/*
-       //senderCutomer=sender()
-
-       numberOfSeatsReserved=1+rand.nextInt((100-1)+1)
-       if(numberOfSeatsReserved<80) {
-         sender() ! "OK 1"
-         //sender() ! Customer.ReservationOK(flightNumber,(1+rand.nextInt(100-1)+1).toString())
-       }
-         else
-         sender() ! "Fauilure 1"
-        //sender() ! Customer.ReservationFailed(flightNumber,numberOfSeatsReserved)
-    case echo =>
-*/
 
 
 

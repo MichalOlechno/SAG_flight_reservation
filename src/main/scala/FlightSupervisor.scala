@@ -6,6 +6,7 @@ import akka.event.Logging
 import flight_reservation.ReservationAgent.PrepareData
 import flight_reservation.sbt.util.Customer
 import flight_reservation.sbt.util.Customer.{GetData, SearchForFlight, Tick}
+import jdk.internal.agent.resources.agent
 
 import scala.concurrent.duration._
 import scala.collection.mutable.ListBuffer
@@ -41,7 +42,9 @@ class FlightSupervisor() extends Actor {
   var customerScheduler: ListBuffer[CustomerScheduler] = ListBuffer()
   var customersData: ListBuffer[CustomerData] = ListBuffer()
   var flightsData: ListBuffer[FlightDetails] = ListBuffer()
+  var rand=new scala.util.Random()
   var GotData = 0
+  var flightNumbers=0
 
   def receive = {
     case CreateCustomers(number) =>
@@ -49,7 +52,12 @@ class FlightSupervisor() extends Actor {
     case CreateReservationAgents(number) =>
       for (i <- 1 to number)
         ReservationAgents += context.system.actorOf(ReservationAgent.props(self), name = s"ReservationAgent${i}")
-      ReservationAgents.foreach(x => x ! PrepareData(FlightNames.Berlin))
+        ReservationAgents.foreach(x => {
+        var i = 1 + rand.nextInt(3)
+        for (j <- 1 to i) {
+          x ! PrepareData(FlightNames.parse(rand.nextInt(5)))
+        }
+      })
       ReservationAgents.foreach(x => AvailableReservationAgents += x)
     case StartReservation() =>
       StartReservation()
@@ -76,52 +84,28 @@ class FlightSupervisor() extends Actor {
     case Stop(actor) =>
       try {
         customerScheduler.find(x => x.actor == actor).get.cancellable.cancel()
-        log.info(s"GetData1 for ${actor}")
         actor ! GetData()
-        // context.system.stop(actor)
       }
       catch {
         case e: NoSuchElementException =>
-          log.info(s"GetData2 for ${actor}")
           actor ! GetData()
       }
-    case ProcessData() =>
-    //customersData.foreach(customer=>
-    //flightsData.foreach(flight=>
-    //var CustomerOccurenceInFlightDetails = 0
-    // var FlightReferencesInCustomerDetails = 0
-    //val customerID = customersData(0).actor
-    // val flightID = customersData(0).reservations(0)
-    // log.info(s"customerID= ${customerID}")
-    //log.info(s"flightID= ${flightID}")
-    //customersData(0).reservations.foreach(x => if (x == flightID) FlightReferencesInCustomerDetails = FlightReferencesInCustomerDetails + 1)
-    // val flight = flightsData.find(x => x.flightID == flightID).get
-    // flight.seat.foreach(x => if (x == customerID) CustomerOccurenceInFlightDetails = CustomerOccurenceInFlightDetails + 1)
-    // log.info(s"flights reserved by customer = ${FlightReferencesInCustomerDetails}")
-    // log.info(s"Customer References in flight = ${CustomerOccurenceInFlightDetails}")
 
     case _ =>
   }
 
   def StartReservation(): Unit = {
-    //TODO: rand flightNames
-    Customers.foreach(customer => customer ! SearchForFlight(FlightNames.Berlin))
-    log.info("ReservationStarted")
+    Customers.foreach(customer => customer ! SearchForFlight(FlightNames.parse(rand.nextInt(5))))
+    //log.info("ReservationStarted")
 
   }
 
   def StartReservation(agent: ActorRef): Unit = {
     if (AvailableReservationAgents.length > 0) {
-      //TODO: rand flightNames
-      agent ! SearchForFlight(FlightNames.Berlin)
-      log.info("SearchForNextFlight")
-
+      agent ! SearchForFlight(FlightNames.parse(rand.nextInt(5)))
     }
     else {
-      //GotData = GotData + 1
-      log.info(s"GetData3 for ${agent}")
       agent ! GetData()
-      log.info(s"GotData = ${GotData}")
     }
   }
 
@@ -129,9 +113,7 @@ class FlightSupervisor() extends Actor {
     var CustomerOccurenceInFlightDetails = 0
     var FlightReferencesInCustomerDetails = 0
     var customerID: ActorRef = null
-    //var flightID = ""
     var error = false
-    //var flight:FlightDetails=null
 
     customersData.foreach(customer => {
       customerID = customer.actor
@@ -158,6 +140,10 @@ class FlightSupervisor() extends Actor {
     })
     if(error)
       log.error("!!!!!!!!!!!!!!!!!!!!!ERROR!!!!!!!!!!!!!!!!!!!!")
+    else
+      {
+        log.info("!!!!!!!!!!!!!!!!!!!!!DONE!!!!!!!!!!!!!!!!!!!!")
+      }
   }
 }
 
